@@ -2,7 +2,12 @@ package com.recycler.coverflow;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.hai.floatinglayer.FloatingCover;
+import com.hai.floatinglayer.FloatingManager;
 
 import recycler.coverflow.CoverFlowLayoutManger;
 import recycler.coverflow.RecyclerCoverFlow;
@@ -10,6 +15,7 @@ import recycler.coverflow.RecyclerCoverFlow;
 public class JustCoverFlowActivity extends AppCompatActivity implements Adapter.onItemClick {
 
     private RecyclerCoverFlow mList;
+    private int currentPos;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +34,16 @@ public class JustCoverFlowActivity extends AppCompatActivity implements Adapter.
             @Override
             public void onItemSelected(int position) {
                 ((TextView)findViewById(R.id.index)).setText((position+1)+"/"+mList.getLayoutManager().getItemCount());
+                currentPos = position;
+            }
+        });
+
+        ScrollView scrollView = (ScrollView) findViewById(R.id.scrollView);
+        FloatingCover floatingCover = (FloatingCover) findViewById(R.id.floating_container);
+        FloatingManager.getInstance().init(this, scrollView, floatingCover, new FloatingManager.OnPositionListener() {
+            @Override
+            public int getCurrentPos() {
+                return currentPos;
             }
         });
     }
@@ -36,4 +52,9 @@ public class JustCoverFlowActivity extends AppCompatActivity implements Adapter.
     public void clickItem(int pos) {
         mList.smoothScrollToPosition(pos);
     }
+
+//    @Override
+//    public void imgLongClickItem(int pos) {
+//        Toast.makeText(this, "长按："+pos, Toast.LENGTH_SHORT).show();
+//    }
 }

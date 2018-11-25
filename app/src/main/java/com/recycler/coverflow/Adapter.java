@@ -8,6 +8,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
+import com.hai.floatinglayer.FloatingImage;
+import com.hai.floatinglayer.FloatingManager;
 
 /**
  * Created by chenxiaoping on 2017/3/28.
@@ -41,18 +43,47 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
     }
 
     @Override
-    public void onBindViewHolder(ViewHolder holder, final int position) {
+    public void onBindViewHolder(final ViewHolder holder, final int position) {
         Glide.with(mContext).load(mColors[position % mColors.length])
                 .into(holder.img);
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
+        holder.img.setTouchListener(new FloatingImage.ITouchListener() {
             @Override
-            public void onClick(View v) {
-//                Toast.makeText(mContext, "点击了："+position, Toast.LENGTH_SHORT).show();
+            public void onClickEvent() {
                 if (clickCb != null) {
                     clickCb.clickItem(position);
                 }
             }
+
+            @Override
+            public void onLongClickEvent() {
+                FloatingManager.getInstance().onLongClickEvent(position);
+            }
+
+            @Override
+            public void onDown() {
+                FloatingManager.getInstance().onDown(holder.img);
+            }
+
+            @Override
+            public void onMove(float curX, float curY) {
+                FloatingManager.getInstance().onMove(curX, curY);
+            }
+
+            @Override
+            public void onUp() {
+                FloatingManager.getInstance().onUp();
+            }
         });
+
+//        holder.itemView.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+////                Toast.makeText(mContext, "点击了："+position, Toast.LENGTH_SHORT).show();
+//                if (clickCb != null) {
+//                    clickCb.clickItem(position);
+//                }
+//            }
+//        });
     }
 
     @Override
@@ -61,14 +92,15 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView img;
+        FloatingImage img;
         public ViewHolder(View itemView) {
             super(itemView);
-            img = (ImageView) itemView.findViewById(R.id.img);
+            img = (FloatingImage) itemView.findViewById(R.id.img);
         }
     }
 
     interface onItemClick {
         void clickItem(int pos);
+//        void imgLongClickItem(int pos);
     }
 }

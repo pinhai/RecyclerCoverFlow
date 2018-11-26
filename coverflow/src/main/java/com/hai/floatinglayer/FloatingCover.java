@@ -1,15 +1,22 @@
 package com.hai.floatinglayer;
 
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Handler;
 import android.util.AttributeSet;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.TransitionOptions;
+import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions;
+import com.bumptech.glide.request.transition.DrawableCrossFadeFactory;
+import com.bumptech.glide.request.transition.ViewPropertyTransition;
 import com.hai.floatinglayer.model.ImageItem;
 import com.hai.floatinglayer.util.ScreenUtils;
 
@@ -75,8 +82,8 @@ public class FloatingCover extends RelativeLayout {
         centerImg.setLayoutParams(lp);
         centerImg.setImageResource(R.drawable.item2);
         centerImg.setScaleType(ImageView.ScaleType.CENTER_CROP);
-
         addView(centerImg);
+
         getScrollView().scrollTo(0, (MAX_HEIGHT-lp.height)/2-
                 (location2[1]-ScreenUtils.getStatusBarHeight(getContext())-ScreenUtils.dp2px(getContext(),55)));
     }
@@ -273,9 +280,14 @@ public class FloatingCover extends RelativeLayout {
 
     private void addView(ImageView image, MarginLayoutParams lp){
         image.setLayoutParams(lp);
-        image.setImageResource(R.drawable.item2);
+//        image.setImageResource(R.drawable.item2);
         image.setScaleType(ImageView.ScaleType.CENTER_CROP);
         addView(image);
+        Glide.with(getContext())
+                .asBitmap()
+                .transition(new BitmapTransitionOptions().crossFade(2500))
+                .load(R.drawable.item2)
+                .into(image);
     }
 
 }

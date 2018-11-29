@@ -1,22 +1,20 @@
 package com.hai.floatinglayer;
 
-import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Handler;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.AttributeSet;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.TransitionOptions;
 import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions;
-import com.bumptech.glide.request.transition.DrawableCrossFadeFactory;
-import com.bumptech.glide.request.transition.ViewPropertyTransition;
+import com.bumptech.glide.request.target.SimpleTarget;
+import com.bumptech.glide.request.transition.Transition;
 import com.hai.floatinglayer.model.ImageItem;
 import com.hai.floatinglayer.util.ScreenUtils;
 
@@ -29,13 +27,17 @@ import recycler.coverflow.R;
 public class FloatingCover extends RelativeLayout {
 
     private static final int MAX_HEIGHT = 10000;  //最大高度，确保上下滑动不会到边界
-    private static final int CUSTOM_MARGIN = 50;
+    private static final int CUSTOM_MARGIN = ScreenUtils.dp2px(10);
 
     private int MAX_WIDTH_RANDOM = 800, MIN_WIDTH_RANDOM = 300;  //随机生成图片宽度范围
-    int imageCountTop = 5, imageCountDown = 5;
+    int imageCountTop, imageCountDown;
     List<ImageItem> imageItemsTop, imageItemsDown;
+    List<String> mUrls;  //图片地址
 
     ImageView centerImg;
+
+    long lastMillis;
+    static final float SPEED_THRESHOLD = ScreenUtils.dp2px(100);  //速度阈值，超过该值就按比率增加滑动速度，单位：像素/s
 
     public FloatingCover(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -61,17 +63,23 @@ public class FloatingCover extends RelativeLayout {
         setLayoutParams(lp);
     }
 
-    public void onLongClickEvent(){
+    public void onLongClickEvent(List<String> urls){
+        mUrls = urls;
+        imageCountDown = urls.size()/2;
+        imageCountTop = urls.size() - imageCountDown;
+
         setVisible(true);
-        randomImageSize(((BitmapDrawable)centerImg.getDrawable()).getBitmap());
-        randomImageViewTop(centerImg, null, null, 0);
-        randomImageViewDown(centerImg, null, null, 0);
+        randomImageSize(urls);
+//        randomImageViewTop(centerImg, null, null, 0);
+//        randomImageViewDown(centerImg, null, null, 0);
     }
 
     public void onDown(FloatingImage image){
         removeAllViews();
         imageItemsTop.clear();
         imageItemsDown.clear();
+
+        lastMillis = System.currentTimeMillis();
 
         int[] location2 = new int[2] ;
         image.getLocationOnScreen(location2);//获取在整个屏幕内的绝对坐标
@@ -80,7 +88,7 @@ public class FloatingCover extends RelativeLayout {
         LayoutParams lp = new LayoutParams(image.getWidth(), image.getHeight());
         lp.addRule(CENTER_IN_PARENT);
         centerImg.setLayoutParams(lp);
-        centerImg.setImageResource(R.drawable.item2);
+        centerImg.setImageDrawable(image.getDrawable());
         centerImg.setScaleType(ImageView.ScaleType.CENTER_CROP);
         addView(centerImg);
 
@@ -89,7 +97,15 @@ public class FloatingCover extends RelativeLayout {
     }
 
     public void onMove(float curX, float curY){
-        getScrollView().scrollBy(0, (int) -curY);
+        long curM = System.currentTimeMillis();
+        float speed = Math.abs(curY)*1000/(curM-lastMillis);
+        lastMillis = curM;
+        if(speed > SPEED_THRESHOLD){
+            float disY = curY*(speed/SPEED_THRESHOLD);
+            getScrollView().scrollBy(0, (int) -disY);
+        }else {
+            getScrollView().scrollBy(0, (int) -curY);
+        }
     }
 
     public void onUp(){
@@ -105,20 +121,35 @@ public class FloatingCover extends RelativeLayout {
     }
 
     //随机生成图片宽和高
-    private void randomImageSize(Bitmap bitmap) {
-        Random random = new Random();
+    private void randomImageSize(List<String> urls) {
+        final Random random = new Random();
         for(int i=0; i<imageCountTop+imageCountDown; i++){
-            int width = (int) (random.nextFloat()*(MAX_WIDTH_RANDOM-MIN_WIDTH_RANDOM) + MIN_WIDTH_RANDOM);
-            int height = (int) (((float)width/bitmap.getWidth())*bitmap.getHeight());
+            final int iT = i;
+            Glide.with(getContext())
+                    .asBitmap()
+                    .load(urls.get(i))
+                    .into(new SimpleTarget<Bitmap>() {
+                        @Override
+                        public void onResourceReady(@NonNull Bitmap bitmap, @Nullable Transition<? super Bitmap> transition) {
+                            int width = (int) (random.nextFloat()*(MAX_WIDTH_RANDOM-MIN_WIDTH_RANDOM) + MIN_WIDTH_RANDOM);
+                            int height = (int) (((float)width/bitmap.getWidth())*bitmap.getHeight());
 
-            ImageItem item = new ImageItem();
-            item.setWidth(width);
-            item.setHeight(height);
-            if(i<imageCountTop){
-                imageItemsTop.add(item);
-            }else {
-                imageItemsDown.add(item);
-            }
+                            ImageItem item = new ImageItem();
+                            item.setWidth(width);
+                            item.setHeight(height);
+                            if(iT<imageCountTop){
+                                imageItemsTop.add(item);
+                                if(imageItemsTop.size() == imageCountTop){
+                                    randomImageViewTop(centerImg, null, null, 0);
+                                }
+                            }else {
+                                imageItemsDown.add(item);
+                                if(imageItemsDown.size() == imageCountDown){
+                                    randomImageViewDown(centerImg, null, null, 0);
+                                }
+                            }
+                        }
+                    });
         }
     }
 
@@ -126,11 +157,12 @@ public class FloatingCover extends RelativeLayout {
     private void randomImageViewTop(final ImageView bottom, final ImageView left, final ImageView right,final int position) {
         if(position >= imageItemsTop.size()) return;
 
-        final int p = position + 1;
+        final int nextPos = position + 1;
 
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
+                if(position >= imageItemsDown.size()) return;
                 ImageItem imageSize = imageItemsTop.get(position);
                 ImageView image = new ImageView(getContext());
                 MarginLayoutParams lp = new MarginLayoutParams(imageSize.getWidth(), imageSize.getHeight());
@@ -143,13 +175,13 @@ public class FloatingCover extends RelativeLayout {
                         if(lOrR < 0.5){
                             //排左边
                             lp.leftMargin = (bottom.getLeft()-lp.width)/2;
-                            addView(image, lp);
-                            randomImageViewTop(bottom, image, null, p);
+                            addView(image, lp, position);
+                            randomImageViewTop(bottom, image, null, nextPos);
                         }else {
                             //排右边
                             lp.leftMargin = (bottom.getLeft()-lp.width)/2 + bottom.getRight();
-                            addView(image, lp);
-                            randomImageViewTop(bottom, null, image, p);
+                            addView(image, lp, position);
+                            randomImageViewTop(bottom, null, image, nextPos);
                         }
                     }else {
                         //排在点击图的上面
@@ -157,13 +189,13 @@ public class FloatingCover extends RelativeLayout {
                         if(lOrR < 0.5){
                             //排左边
                             lp.leftMargin = (int) (CUSTOM_MARGIN * lOrR * 3);
-                            addView(image, lp);
-                            randomImageViewTop(bottom, image, null, p);
+                            addView(image, lp, position);
+                            randomImageViewTop(bottom, image, null, nextPos);
                         }else {
                             //排右边
                             lp.leftMargin = (int) (getScrollView().getWidth() - lp.width - (CUSTOM_MARGIN * lOrR * 2));
-                            addView(image, lp);
-                            randomImageViewTop(bottom, null, image, p);
+                            addView(image, lp, position);
+                            randomImageViewTop(bottom, null, image, nextPos);
                         }
                     }
                 }else if(left != null && right == null){
@@ -171,29 +203,29 @@ public class FloatingCover extends RelativeLayout {
                         lp.width = getScrollView().getWidth()-left.getRight()-CUSTOM_MARGIN;
                     }
 
-                    int bottomRandom = (int) (new Random().nextFloat()*CUSTOM_MARGIN*3);
+                    int bottomRandom = (int) (new Random().nextFloat()*CUSTOM_MARGIN*2 + CUSTOM_MARGIN);
                     lp.topMargin = bottom.getTop() - lp.height - bottomRandom;
                     lp.leftMargin = left.getRight() + ((getScrollView().getWidth()-left.getRight()-lp.width)/2);
-                    addView(image, lp);
+                    addView(image, lp, position);
 
                     if(left.getTop() > lp.topMargin){
-                        randomImageViewTop(left, null, image, p);
+                        randomImageViewTop(left, null, image, nextPos);
                     }else {
-                        randomImageViewTop(image, left, null, p);
+                        randomImageViewTop(image, left, null, nextPos);
                     }
                 }else if(left == null && right != null){
                     if(lp.width > (right.getLeft()-CUSTOM_MARGIN)){
                         lp.width = right.getLeft()-CUSTOM_MARGIN;
                     }
 
-                    int bottomRandom = (int) (new Random().nextFloat()*CUSTOM_MARGIN*3);
+                    int bottomRandom = (int) (new Random().nextFloat()*CUSTOM_MARGIN*2 + CUSTOM_MARGIN);
                     lp.topMargin = bottom.getTop() - lp.height - bottomRandom;
                     lp.leftMargin = (right.getLeft() - lp.width)/2;
-                    addView(image, lp);
+                    addView(image, lp, position);
                     if(right.getTop() > lp.topMargin){
-                        randomImageViewTop(right, image, null, p);
+                        randomImageViewTop(right, image, null, nextPos);
                     }else {
-                        randomImageViewTop(image, null, right, p);
+                        randomImageViewTop(image, null, right, nextPos);
                     }
                 }
             }
@@ -209,6 +241,7 @@ public class FloatingCover extends RelativeLayout {
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
+                if(position >= imageItemsDown.size()) return;
                 ImageItem imageSize = imageItemsDown.get(position);
                 ImageView image = new ImageView(getContext());
                 MarginLayoutParams lp = new MarginLayoutParams(imageSize.getWidth(), imageSize.getHeight());
@@ -221,12 +254,12 @@ public class FloatingCover extends RelativeLayout {
                         if(lOrR < 0.5){
                             //排左边
                             lp.leftMargin = (top.getLeft()-lp.width)/2;
-                            addView(image, lp);
+                            addView(image, lp, position+imageCountTop);
                             randomImageViewDown(top, image, null, p);
                         }else {
                             //排右边
                             lp.leftMargin = (top.getLeft()-lp.width)/2 + top.getRight();
-                            addView(image, lp);
+                            addView(image, lp, position+imageCountTop);
                             randomImageViewDown(top, null, image, p);
                         }
                     }else {
@@ -235,12 +268,12 @@ public class FloatingCover extends RelativeLayout {
                         if(lOrR < 0.5){
                             //排左边
                             lp.leftMargin = (int) (CUSTOM_MARGIN * lOrR * 3);
-                            addView(image, lp);
+                            addView(image, lp, position+imageCountTop);
                             randomImageViewDown(top, image, null, p);
                         }else {
                             //排右边
                             lp.leftMargin = (int) (getScrollView().getWidth() - lp.width - (CUSTOM_MARGIN * lOrR * 2));
-                            addView(image, lp);
+                            addView(image, lp, position+imageCountTop);
                             randomImageViewDown(top, null, image, p);
                         }
                     }
@@ -249,10 +282,10 @@ public class FloatingCover extends RelativeLayout {
                         lp.width = getScrollView().getWidth()-left.getRight()-CUSTOM_MARGIN;
                     }
 
-                    int bottomRandom = (int) (new Random().nextFloat()*CUSTOM_MARGIN*3);
-                    lp.topMargin = top.getBottom() + bottomRandom;
+                    int topRandom = (int) (new Random().nextFloat()*CUSTOM_MARGIN*2 + CUSTOM_MARGIN);
+                    lp.topMargin = top.getBottom() + topRandom;
                     lp.leftMargin = left.getRight() + ((getScrollView().getWidth()-left.getRight()-lp.width)/2);
-                    addView(image, lp);
+                    addView(image, lp, position+imageCountTop);
 
                     if(left.getBottom() > (lp.topMargin+lp.height)){
                         randomImageViewDown(image, left, null, p);
@@ -264,10 +297,10 @@ public class FloatingCover extends RelativeLayout {
                         lp.width = right.getLeft()-CUSTOM_MARGIN;
                     }
 
-                    int bottomRandom = (int) (new Random().nextFloat()*CUSTOM_MARGIN*3);
-                    lp.topMargin = top.getBottom() + bottomRandom;
+                    int topRandom = (int) (new Random().nextFloat()*CUSTOM_MARGIN*2 + CUSTOM_MARGIN);
+                    lp.topMargin = top.getBottom() + topRandom;
                     lp.leftMargin = (right.getLeft() - lp.width)/2;
-                    addView(image, lp);
+                    addView(image, lp, position+imageCountTop);
                     if(right.getBottom() > (lp.topMargin+lp.height)){
                         randomImageViewDown(image, null, right, p);
                     }else {
@@ -278,7 +311,10 @@ public class FloatingCover extends RelativeLayout {
         }, 200);
     }
 
-    private void addView(ImageView image, MarginLayoutParams lp){
+    private void addView(ImageView image, MarginLayoutParams lp, int position){
+//        int[] ids = new int[]{R.drawable.item1, R.drawable.item2, R.drawable.item3, R.drawable.item4,
+//                R.drawable.item5, R.drawable.item6, R.drawable.maskarty, R.drawable.maskarty2};
+//        int id = ids[(int) (new Random().nextFloat()*ids.length)];
         image.setLayoutParams(lp);
 //        image.setImageResource(R.drawable.item2);
         image.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -286,7 +322,7 @@ public class FloatingCover extends RelativeLayout {
         Glide.with(getContext())
                 .asBitmap()
                 .transition(new BitmapTransitionOptions().crossFade(2500))
-                .load(R.drawable.item2)
+                .load(mUrls.get(position))
                 .into(image);
     }
 

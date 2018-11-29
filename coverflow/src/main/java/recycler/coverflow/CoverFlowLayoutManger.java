@@ -20,9 +20,7 @@ import android.view.animation.DecelerateInterpolator;
  * <p>通过重写LayoutManger中的{@link #scrollHorizontallyBy(int, RecyclerView.Recycler, RecyclerView.State)}
  * 进行水平滚动处理
  *
- * @author Chen Xiaoping (562818444@qq.com)
  * @version V1.0
- * @Datetime 2017-04-18
  */
 
 public class CoverFlowLayoutManger extends RecyclerView.LayoutManager {
@@ -169,6 +167,7 @@ public class CoverFlowLayoutManger extends RecyclerView.LayoutManager {
         } else if (dx + mOffsetAll > getMaxOffset()){
             travel = (int) (getMaxOffset() - mOffsetAll);
         }
+
         mOffsetAll += travel; //累计偏移量
         layoutItems(recycler, state, dx > 0 ? SCROLL_RIGHT : SCROLL_LEFT);
         return travel;
@@ -233,8 +232,8 @@ public class CoverFlowLayoutManger extends RecyclerView.LayoutManager {
                 frame.right - mOffsetAll,
                 frame.bottom);
         if (!mIsFlatFlow) { //不是平面普通滚动的情况下才进行缩放
-            child.setScaleX(computeScale(frame.left - mOffsetAll)); //缩放
-            child.setScaleY(computeScale(frame.left - mOffsetAll)); //缩放
+            child.setScaleX(computeScale(frame.left - mOffsetAll, child)); //缩放
+            child.setScaleY(computeScale(frame.left - mOffsetAll, child)); //缩放
         }
 
         if (mItemGradualAlpha) {
@@ -369,11 +368,43 @@ public class CoverFlowLayoutManger extends RecyclerView.LayoutManager {
 
     /**
      * 计算Item缩放系数
-     * @param x Item的偏移量
+     * @param left Item的偏移量
+     * @param child
      * @return 缩放系数
      */
-    private float computeScale(int x) {
-        float scale = 1 - Math.abs(x - mStartX) * 1.0f / Math.abs(mStartX + mDecoratedChildWidth / mIntervalRatio);
+    private float computeScale(int left, View child) {
+//        float scale = 1 - Math.abs(left - mStartX) * 1.5f / Math.abs(mStartX + mDecoratedChildWidth / mIntervalRatio);
+        float scale;
+        int disAbs = Math.abs(left - mStartX);
+        float scaleRatio = 0.7f;
+        float multi1 = (1-scaleRatio)/0.5f;
+        float multi2 = (1-scaleRatio)/0.25f;
+        if(disAbs <= mDecoratedChildWidth/2 && disAbs >= mDecoratedChildWidth/4){
+            scale = scaleRatio;
+            int offset = (int) (((mDecoratedChildWidth/2 - disAbs)*(1-scaleRatio*1.295)/2)/0.25f);
+            if(left < mStartX){
+                layoutDecorated(child,
+                        child.getLeft()-offset, child.getTop(), child.getRight()-offset, child.getBottom());
+            }else {
+                layoutDecorated(child,
+                        child.getLeft()+offset, child.getTop(), child.getRight()+offset, child.getBottom());
+            }
+        }else if(disAbs > mDecoratedChildWidth/2){
+//            scale = 1 - disAbs / (mDecoratedChildWidth + disAbs - 0.7f*mDecoratedChildWidth);
+            scale = 1 - ((float)disAbs/mDecoratedChildWidth)*multi1;
+        }
+        else {
+//            scale = 1 - disAbs * 4f / Math.abs(mDecoratedChildWidth / mIntervalRatio);
+            scale = 1 - ((float)disAbs/mDecoratedChildWidth)*multi2;
+            int offset = (int) ((disAbs*(1-scaleRatio*1.295)/2)/0.25f);
+            if(left < mStartX){
+                layoutDecorated(child,
+                        child.getLeft()-offset, child.getTop(), child.getRight()-offset, child.getBottom());
+            }else {
+                layoutDecorated(child,
+                        child.getLeft()+offset, child.getTop(), child.getRight()+offset, child.getBottom());
+            }
+        }
         if (scale < 0) scale = 0;
         if (scale > 1) scale = 1;
         return scale;

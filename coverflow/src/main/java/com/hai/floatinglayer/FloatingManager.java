@@ -5,6 +5,8 @@ import android.widget.ScrollView;
 
 import com.hai.floatinglayer.util.ScreenUtils;
 
+import java.util.List;
+
 public class FloatingManager {
 
     public interface OnPositionListener{
@@ -67,12 +69,12 @@ public class FloatingManager {
         return parent;
     }
 
-    public void onLongClickEvent(int position){
+    public void onLongClickEvent(int position, List<String > urls){
         if(parent == null || floatingCover == null || positionListener.getCurrentPos() != position){
             return;
         }
 
-        floatingCover.onLongClickEvent();
+        floatingCover.onLongClickEvent(urls);
     }
 
     public void onDown(FloatingImage image){

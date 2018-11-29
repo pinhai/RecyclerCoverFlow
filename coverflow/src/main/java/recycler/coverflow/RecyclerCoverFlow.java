@@ -15,6 +15,9 @@ import android.view.MotionEvent;
  */
 
 public class RecyclerCoverFlow extends RecyclerView {
+
+    private double scale = 0.3;      //抛掷速度的缩放因子
+
     /**
      * 按下的X轴坐标
      */
@@ -165,4 +168,15 @@ public class RecyclerCoverFlow extends RecyclerView {
         }
         return super.dispatchTouchEvent(ev);
     }
+
+    public void setFlingScale(double scale){
+        this.scale = scale;
+    }
+
+    @Override
+    public boolean fling(int velocityX, int velocityY) {
+        velocityX *= scale;
+        return super.fling(velocityX, velocityY);
+    }
+
 }

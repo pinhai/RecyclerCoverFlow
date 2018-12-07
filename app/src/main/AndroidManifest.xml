@@ -27,6 +27,7 @@
         <activity android:name=".viewpager.ViewpagerActivity" />
 
         <activity android:name=".recyclerview.RecyclerViewActivity" />
+        <activity android:name=".poker.RotatePokerActivity" />
     </application>
 
 </manifest>

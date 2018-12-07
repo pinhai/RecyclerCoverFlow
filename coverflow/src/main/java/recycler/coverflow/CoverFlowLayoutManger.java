@@ -381,7 +381,7 @@ public class CoverFlowLayoutManger extends RecyclerView.LayoutManager {
         float multi2 = (1-scaleRatio)/0.25f;
         if(disAbs <= mDecoratedChildWidth/2 && disAbs >= mDecoratedChildWidth/4){
             scale = scaleRatio;
-            int offset = (int) (((mDecoratedChildWidth/2 - disAbs)*(1-scaleRatio*1.295)/2)/0.25f);
+            int offset = (int) (((mDecoratedChildWidth/2 - disAbs)*(1-scaleRatio*1.29)/2)/0.25f);
             if(left < mStartX){
                 layoutDecorated(child,
                         child.getLeft()-offset, child.getTop(), child.getRight()-offset, child.getBottom());
@@ -396,7 +396,7 @@ public class CoverFlowLayoutManger extends RecyclerView.LayoutManager {
         else {
 //            scale = 1 - disAbs * 4f / Math.abs(mDecoratedChildWidth / mIntervalRatio);
             scale = 1 - ((float)disAbs/mDecoratedChildWidth)*multi2;
-            int offset = (int) ((disAbs*(1-scaleRatio*1.295)/2)/0.25f);
+            int offset = (int) ((disAbs*(1-scaleRatio*1.29)/2)/0.25f);
             if(left < mStartX){
                 layoutDecorated(child,
                         child.getLeft()-offset, child.getTop(), child.getRight()-offset, child.getBottom());

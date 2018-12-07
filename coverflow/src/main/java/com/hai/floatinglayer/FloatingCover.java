@@ -38,6 +38,7 @@ public class FloatingCover extends RelativeLayout {
 
     long lastMillis;
     static final float SPEED_THRESHOLD = ScreenUtils.dp2px(100);  //速度阈值，超过该值就按比率增加滑动速度，单位：像素/s
+    static final float MAX_SPEED = SPEED_THRESHOLD * 3;  //最大速度
 
     public FloatingCover(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -101,11 +102,13 @@ public class FloatingCover extends RelativeLayout {
         float speed = Math.abs(curY)*1000/(curM-lastMillis);
         lastMillis = curM;
         if(speed > SPEED_THRESHOLD){
-            float disY = curY*(speed/SPEED_THRESHOLD);
-            getScrollView().scrollBy(0, (int) -disY);
-        }else {
-            getScrollView().scrollBy(0, (int) -curY);
+            if(speed >= MAX_SPEED){
+                curY *= MAX_SPEED/SPEED_THRESHOLD;
+            }else {
+                curY *= (speed/SPEED_THRESHOLD);
+            }
         }
+        getScrollView().scrollBy(0, (int) -curY);
     }
 
     public void onUp(){

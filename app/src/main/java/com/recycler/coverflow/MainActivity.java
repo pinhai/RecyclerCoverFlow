@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
+import com.recycler.coverflow.poker.RotatePokerActivity;
 import com.recycler.coverflow.recyclerview.RecyclerViewActivity;
 import com.recycler.coverflow.viewpager.ViewpagerActivity;
 
@@ -15,8 +16,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Intent intent = new Intent(this, JustCoverFlowActivity.class);
-        startActivity(intent);
     }
 
     public void onJustCoverFlowClick(View view) {
@@ -34,4 +33,8 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    public void onRotatePokerClick(View view) {
+        Intent intent = new Intent(this, RotatePokerActivity.class);
+        startActivity(intent);
+    }
 }

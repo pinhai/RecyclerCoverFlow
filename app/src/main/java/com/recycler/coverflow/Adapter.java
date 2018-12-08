@@ -31,7 +31,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
     private int imgSize;
 
     public Adapter(Context c) {
-        mContext = c;
+        this(c, null);
     }
 
     public Adapter(Context c, onItemClick cb) {
